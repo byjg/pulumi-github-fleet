@@ -53,6 +53,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # uv build takes the version from pyproject.toml; the tag only triggers this
+      # job. Without this check, tagging without bumping the file rebuilds the version
+      # already on PyPI, and the upload fails after everything else has passed.
+      - name: Verify the tag matches the version
+        run: |
+          version=$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in pyproject.toml. Bump the file, or tag $version."
+            exit 1
+          fi
+          echo "Tag and version agree: $version"
+
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
