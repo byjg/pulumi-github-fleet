@@ -7,6 +7,7 @@ tags: [python, devops]
 
 [![Build](https://github.com/byjg/pulumi-github-fleet/actions/workflows/build.yml/badge.svg)](https://github.com/byjg/pulumi-github-fleet/actions/workflows/build.yml)
 [![PyPI](https://img.shields.io/pypi/v/ghfleet.svg)](https://pypi.org/project/ghfleet/)
+[![GitHub license](https://img.shields.io/github/license/byjg/pulumi-github-fleet.svg)](https://opensource.byjg.com/license/)
 
 Declare a fleet of GitHub repositories from one configuration file, with Pulumi:
 repository settings, Actions secrets, workflow permissions and branch protection
@@ -223,4 +224,4 @@ stack that calls it, and can only be consumed from Python.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/byjg/pulumi-github-fleet/blob/master/LICENSE).
