@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ghfleet"
+version = "0.1.0"
+description = "Declare a fleet of GitHub repositories -- settings, secrets, workflow permissions and branch protection rulesets -- from one configuration file, with Pulumi"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [{name = "Joao Gilberto Magalhaes", email = "joao@byjg.com.br"}]
+keywords = ["pulumi", "github", "infrastructure-as-code", "branch-protection", "repository-settings"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Software Development :: Version Control :: Git",
+    "Topic :: System :: Systems Administration",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "pulumi>=3.0.0,<4.0.0",
+    "pulumi-github>=6.0.0,<7.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/byjg/pulumi-github-fleet"
+Documentation = "https://opensource.byjg.com/docs/devops/pulumi-github-fleet/"
+Source = "https://github.com/byjg/pulumi-github-fleet"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+    "mypy>=1.11.0",
+    "types-pyyaml>=6.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ghfleet"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["pulumi", "pulumi_github"]
+ignore_missing_imports = true
