@@ -6,6 +6,8 @@ tags: [python, devops]
 # ghfleet
 
 [![Build](https://github.com/byjg/pulumi-github-fleet/actions/workflows/build.yml/badge.svg)](https://github.com/byjg/pulumi-github-fleet/actions/workflows/build.yml)
+[![Opensource ByJG](https://img.shields.io/badge/opensource-byjg-success.svg)](https://opensource.byjg.com)
+[![Install MCP Server](https://img.shields.io/badge/Install-MCP_Server-8A2BE2?logo=modelcontextprotocol&logoColor=white)](https://opensource.byjg.com/docs/ai/mcpserver-byjg-docs/)
 [![PyPI](https://img.shields.io/pypi/v/ghfleet.svg)](https://pypi.org/project/ghfleet/)
 [![GitHub license](https://img.shields.io/github/license/byjg/pulumi-github-fleet.svg)](https://opensource.byjg.com/license/)
 
@@ -225,3 +227,6 @@ stack that calls it, and can only be consumed from Python.
 ## License
 
 MIT. See [LICENSE](https://github.com/byjg/pulumi-github-fleet/blob/master/LICENSE).
+
+----
+[Open source ByJG](https://opensource.byjg.com)
