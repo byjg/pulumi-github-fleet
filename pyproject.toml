@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ghfleet"
-version = "0.1.0"
+version = "0.2.0"
 description = "Declare a fleet of GitHub repositories -- settings, secrets, workflow permissions and branch protection rulesets -- from one configuration file, with Pulumi"
 readme = "README.md"
 license = {file = "LICENSE"}

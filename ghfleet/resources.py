@@ -69,10 +69,44 @@ def token_from_environment(owner):
     return token
 
 
+# Where a secret can be made available, and the resource that declares it there.
+# GitHub also has secrets for agents, but the provider has no resource for them yet.
+SECRET_APPS = {
+    "actions": github.ActionsSecret,
+    "codespaces": github.CodespacesSecret,
+    "dependabot": github.DependabotSecret,
+}
+
+
+def secret_env_of(secret):
+    """The environment variable a secret without a `value` is read from."""
+    return secret.get("env", secret["name"])
+
+
 def secret_value_from_environment(secret):
-    """Value from the configuration, else from the environment variable named after it."""
+    """Value from the configuration, else from the environment variable `env` names,
+    which defaults to the name of the secret."""
     value = secret.get("value")
-    return value if value is not None else os.environ.get(secret["name"])
+    return value if value is not None else os.environ.get(secret_env_of(secret))
+
+
+def secrets_by_app(secrets_config):
+    """
+    One entry per place a secret goes to, keyed by (name, app).
+
+    A secret goes to GitHub Actions unless it lists other `apps`. The same name can be
+    declared once per app, with a different value in each.
+    """
+    by_app = {}
+    for secret in secrets_config:
+        for app in secret.get("apps", ["actions"]):
+            if app not in SECRET_APPS:
+                raise Exception(
+                    f"Secret {secret['name']}: unknown app '{app}'. "
+                    f"Supported: {', '.join(sorted(SECRET_APPS))}. Aborting."
+                )
+            by_app.setdefault((secret["name"], app), secret)
+    return by_app
 
 
 def apply(config, *, token_for=token_from_environment, secret_value=secret_value_from_environment):
@@ -84,8 +118,8 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
         token_for: Called with an owner, returns its GitHub token. Defaults to reading
             GITHUB_ACCESS_TOKEN_<owner> from the environment, raising when it is unset.
         secret_value: Called with a `secrets` entry, returns the value to write.
-            Defaults to the entry's own `value`, else the environment variable named
-            after the secret.
+            Defaults to the entry's own `value`, else the environment variable the entry
+            names in `env`, else the one named after the secret.
     """
     # Create GitHub providers once per unique owner
     providers = {}
@@ -123,7 +157,7 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
                     "repo_name": repo_name_item,
                     "workflow_permissions": workflow_permissions,
                     "branch_protection": branch_protection_config,
-                    "secrets": list(secrets_config),  # Copy the list
+                    "secrets": secrets_by_app(secrets_config),
                     "repository_settings": dict(repository_settings_config),  # Copy the dict
                 }
             else:
@@ -141,19 +175,17 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
                 # Merge repository settings (a later entry wins on the same key)
                 existing["repository_settings"].update(repository_settings_config)
 
-                # Merge secrets (add new ones, avoid duplicates)
-                existing_secret_names = {s["name"] for s in existing["secrets"]}
-                for secret in secrets_config:
-                    if secret["name"] not in existing_secret_names:
-                        existing["secrets"].append(secret)
+                # Merge secrets (add new ones, the first declaration of a name in an app wins)
+                for key, secret in secrets_by_app(secrets_config).items():
+                    existing["secrets"].setdefault(key, secret)
 
     # Abort before declaring any secret: one without a value would overwrite the
     # real secret with an empty string in every repository that declares it.
     missing_secrets = sorted(
         {
-            secret["name"]
+            secret_env_of(secret)
             for repo_config in repo_configs.values()
-            for secret in repo_config["secrets"]
+            for secret in repo_config["secrets"].values()
             if not secret_value(secret)
         }
     )
@@ -224,10 +256,11 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
             )
 
         # 4) Create/Update secrets
-        for secret in secrets_config:
-            secret_name = secret["name"]
-            github.ActionsSecret(
-                f"{resource_prefix}-secret-{secret_name.lower().replace('_', '-')}",
+        for (secret_name, app), secret in secrets_config.items():
+            # Actions secrets keep the name they always had, so nothing is recreated.
+            kind = "secret" if app == "actions" else f"{app}-secret"
+            SECRET_APPS[app](
+                f"{resource_prefix}-{kind}-{secret_name.lower().replace('_', '-')}",
                 repository=repo_name_item,
                 secret_name=secret_name,
                 plaintext_value=secret_value(secret),

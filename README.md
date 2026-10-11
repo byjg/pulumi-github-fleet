@@ -171,6 +171,35 @@ The run aborts before declaring anything if a secret has no value anywhere. That
 is not politeness: an empty value would overwrite the real secret with an empty string
 in every repository that declares it.
 
+A secret goes to GitHub Actions unless it says otherwise. `apps` lists where it is made
+available, and `env` names the environment variable to read when it is not the name of
+the secret:
+
+```yaml
+secrets:
+  - name: REGISTRY_TOKEN                # GitHub Actions, as above
+  - name: REGISTRY_TOKEN
+    apps: [dependabot]                  # the same name, for Dependabot pull requests
+    env: REGISTRY_READ_TOKEN            # ... with another value: a read-only token
+  - name: REGISTRY_USER
+    value: acme
+    apps: [actions, dependabot, codespaces]
+```
+
+| `apps` value | The secret is available to |
+|---|---|
+| `actions` (default) | GitHub Actions workflows |
+| `dependabot` | Workflows triggered by Dependabot pull requests, which cannot read Actions secrets |
+| `codespaces` | Codespaces created for the repository |
+
+Each app keeps its own secrets, so the same name can hold a different value in each.
+That is the point of the example: a workflow reads `secrets.REGISTRY_TOKEN` either way,
+and on a Dependabot pull request -- which runs dependency code nobody reviewed yet -- it
+gets the read-only token instead of the one that can publish.
+
+GitHub also has secrets for agents; the Pulumi GitHub provider cannot declare them yet,
+so `apps: [agents]` aborts the run, as any unknown value does.
+
 ### Sharing blocks between entries
 
 Entries repeat themselves. Use YAML anchors — a feature of the file format, so nothing
