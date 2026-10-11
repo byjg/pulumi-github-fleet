@@ -97,7 +97,7 @@ def secrets_by_app(secrets_config):
     A secret goes to GitHub Actions unless it lists other `apps`. The same name can be
     declared once per app, with a different value in each.
     """
-    by_app = {}
+    by_app: dict[tuple[str, str], dict] = {}
     for secret in secrets_config:
         for app in secret.get("apps", ["actions"]):
             if app not in SECRET_APPS:
