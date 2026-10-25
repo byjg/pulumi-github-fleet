@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ghfleet"
-version = "0.3.0"
+version = "0.3.1"
 description = "Declare a fleet of GitHub repositories -- settings, secrets, workflow permissions, Dependabot alerts and branch protection rulesets -- from one configuration file, with Pulumi"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -26,7 +26,7 @@ classifiers = [
 
 dependencies = [
     "pulumi>=3.0.0,<4.0.0",
-    "pulumi-github>=6.13.0,<7.0.0",  # RepositoryVulnerabilityAlerts
+    "pulumi-github>=6.13.0,<7.0.0",  # RepositoryVulnerabilityAlerts, `value` on secrets
     "pyyaml>=6.0.0",
 ]
 

@@ -70,12 +70,14 @@ def token_from_environment(owner):
     return token
 
 
-# Where a secret can be made available, and the resource that declares it there.
+# Where a secret can be made available, the resource that declares it there, and the
+# argument that takes its value. The provider deprecated `plaintext_value` for `value`
+# on Actions and Dependabot secrets; Codespaces secrets have no `value` yet.
 # GitHub also has secrets for agents, but the provider has no resource for them yet.
 SECRET_APPS = {
-    "actions": github.ActionsSecret,
-    "codespaces": github.CodespacesSecret,
-    "dependabot": github.DependabotSecret,
+    "actions": (github.ActionsSecret, "value"),
+    "codespaces": (github.CodespacesSecret, "plaintext_value"),
+    "dependabot": (github.DependabotSecret, "value"),
 }
 
 
@@ -278,11 +280,12 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
         for (secret_name, app), secret in secrets_config.items():
             # Actions secrets keep the name they always had, so nothing is recreated.
             kind = "secret" if app == "actions" else f"{app}-secret"
-            SECRET_APPS[app](
+            resource, value_argument = SECRET_APPS[app]
+            resource(
                 f"{resource_prefix}-{kind}-{secret_name.lower().replace('_', '-')}",
                 repository=repo_name_item,
                 secret_name=secret_name,
-                plaintext_value=secret_value(secret),
+                **{value_argument: secret_value(secret)},
                 opts=pulumi.ResourceOptions(provider=provider),
             )
 
