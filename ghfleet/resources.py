@@ -12,6 +12,7 @@ from .config import (
     DEFAULT_BRANCH_PROTECTION_RULES,
     REPOSITORY_SETTINGS_KEYS,
     branch_protection_of,
+    dependabot_of,
     repositories_of,
     repository_settings_of,
     ruleset_name_of,
@@ -145,6 +146,7 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
         branch_protection_config = branch_protection_of(repository)
         secrets_config = repository.get("secrets", [])
         repository_settings_config = repository_settings_of(repository)
+        dependabot_config = dependabot_of(repository)
 
         # Process each repository and merge configs if it appears multiple times
         for repo_name_item in repo_list:
@@ -159,6 +161,7 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
                     "branch_protection": branch_protection_config,
                     "secrets": secrets_by_app(secrets_config),
                     "repository_settings": dict(repository_settings_config),  # Copy the dict
+                    "dependabot": dict(dependabot_config),
                 }
             else:
                 # Repo already seen, merge configurations
@@ -174,6 +177,9 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
 
                 # Merge repository settings (a later entry wins on the same key)
                 existing["repository_settings"].update(repository_settings_config)
+
+                # Merge dependabot (a later entry wins on the same key)
+                existing["dependabot"].update(dependabot_config)
 
                 # Merge secrets (add new ones, the first declaration of a name in an app wins)
                 for key, secret in secrets_by_app(secrets_config).items():
@@ -194,6 +200,18 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
             f"Secrets without a value: {', '.join(missing_secrets)}. Load env.txt. Aborting."
         )
 
+    # GitHub refuses security updates on a repository whose alerts are off.
+    without_alerts = sorted(
+        full_name
+        for full_name, repo_config in repo_configs.items()
+        if repo_config["dependabot"].get("security_updates")
+        and not repo_config["dependabot"].get("alerts")
+    )
+    if without_alerts:
+        raise Exception(
+            f"dependabot security_updates without alerts: {', '.join(without_alerts)}. Aborting."
+        )
+
     # Now process each unique repository once with merged configuration
     for full_name, repo_config in repo_configs.items():
         owner = repo_config["owner"]
@@ -202,6 +220,7 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
         branch_protection_config = repo_config["branch_protection"]
         secrets_config = repo_config["secrets"]
         repository_settings = repo_config["repository_settings"]
+        dependabot_config = repo_config["dependabot"]
 
         provider = providers[owner]
         resource_prefix = full_name.replace("/", "-").replace("_", "-")
@@ -267,7 +286,29 @@ def apply(config, *, token_for=token_from_environment, secret_value=secret_value
                 opts=pulumi.ResourceOptions(provider=provider),
             )
 
-        # 5) Create/Update branch protection ruleset
+        # 5) Dependabot alerts and security updates
+        # Both are switches, so there is nothing to import: creating the resource applies
+        # the setting, whatever it was. Security updates are declared after the alerts
+        # they depend on.
+        alerts = None
+        if "alerts" in dependabot_config:
+            alerts = github.RepositoryVulnerabilityAlerts(
+                f"{resource_prefix}-vulnerability-alerts",
+                repository=repo_name_item,
+                enabled=dependabot_config["alerts"],
+                opts=pulumi.ResourceOptions(provider=provider),
+            )
+        if "security_updates" in dependabot_config:
+            github.RepositoryDependabotSecurityUpdates(
+                f"{resource_prefix}-dependabot-security-updates",
+                repository=repo_name_item,
+                enabled=dependabot_config["security_updates"],
+                opts=pulumi.ResourceOptions(
+                    provider=provider, depends_on=[alerts] if alerts else []
+                ),
+            )
+
+        # 6) Create/Update branch protection ruleset
         # Rulesets on *private* repos require a paid plan; GitHub answers 403 on the free
         # plan. Public repos support them on every plan.
         owner_plan = owner_plans.get(owner)

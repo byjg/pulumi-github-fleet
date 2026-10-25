@@ -66,6 +66,11 @@ BRANCH_PROTECTION_KEYS = frozenset(
     }
 )
 
+# Keys accepted inside a `dependabot` block. Both are repository settings, so neither
+# needs a dependabot.yml: `alerts` reports dependencies with a known vulnerability, and
+# `security_updates` opens a pull request when one of them has a fix.
+DEPENDABOT_KEYS = frozenset({"alerts", "security_updates"})
+
 # The policy applied when a `branch_protection` block does not carry its own `rules`.
 # It is a default, not a rule of the program: write `rules` in config.yml to replace it.
 DEFAULT_BRANCH_PROTECTION_RULES = {
@@ -138,6 +143,18 @@ def branch_protection_of(entry):
     if unknown:
         raise Exception(
             f"Unknown branch_protection in '{entry.get('name', 'unnamed')}': "
+            f"{', '.join(unknown)}. Aborting."
+        )
+    return config
+
+
+def dependabot_of(entry):
+    """The `dependabot` block of an entry, rejecting keys the program ignores."""
+    config = entry.get("dependabot", {})
+    unknown = sorted(set(config) - DEPENDABOT_KEYS)
+    if unknown:
+        raise Exception(
+            f"Unknown dependabot in '{entry.get('name', 'unnamed')}': "
             f"{', '.join(unknown)}. Aborting."
         )
     return config

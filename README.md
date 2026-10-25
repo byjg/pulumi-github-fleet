@@ -12,8 +12,8 @@ tags: [python, devops]
 [![GitHub license](https://img.shields.io/github/license/byjg/pulumi-github-fleet.svg)](https://opensource.byjg.com/license/)
 
 Declare a fleet of GitHub repositories from one configuration file, with Pulumi:
-repository settings, Actions secrets, workflow permissions and branch protection
-rulesets.
+repository settings, Actions secrets, workflow permissions, Dependabot alerts and
+security updates, and branch protection rulesets.
 
 It exists because the interesting part of managing dozens of repositories is not the
 API calls, it is answering "which repositories get this, and what is it exactly?" in a
@@ -79,6 +79,9 @@ repository:
     workflow_permissions:
       default: write
       can_approve_pull_request_reviews: false
+    dependabot:
+      alerts: true
+      security_updates: true
     branch_protection:
       enabled: true
       bypass_actor_ids: [5]
@@ -199,6 +202,26 @@ gets the read-only token instead of the one that can publish.
 
 GitHub also has secrets for agents; the Pulumi GitHub provider cannot declare them yet,
 so `apps: [agents]` aborts the run, as any unknown value does.
+
+### `dependabot`
+
+```yaml
+dependabot:
+  alerts: true             # report dependencies with a known vulnerability
+  security_updates: true   # open a pull request when one of them has a fix
+```
+
+Both are repository settings: neither needs a `.github/dependabot.yml`, which only
+drives *version* updates -- a pull request for every new release, on a schedule.
+
+A key left out is not managed, so the repository keeps whatever it has on GitHub;
+`false` turns the setting off. GitHub refuses security updates on a repository whose
+alerts are off, so `security_updates: true` without `alerts: true` aborts the run.
+An unknown key aborts it too.
+
+Each setting is a resource of its own. Declaring one turns it on (or off) whatever its
+current state, so there is no import step. Removing it from the configuration removes
+the resource, which turns the setting off on GitHub.
 
 ### Sharing blocks between entries
 
